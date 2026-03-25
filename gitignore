@@ -1,0 +1,58 @@
+# ========================
+# Flutter
+# ========================
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.packages
+flutter_app/build/
+flutter_app/*.iml
+flutter_app/android/.gradle/
+flutter_app/android/local.properties
+flutter_app/android/key.properties
+flutter_app/ios/.symlinks/
+flutter_app/ios/Pods/
+flutter_app/ios/Flutter/Flutter.framework
+flutter_app/ios/Flutter/Flutter.podspec
+flutter_app/web/
+
+# ========================
+# Backend (Python / FastAPI)
+# ========================
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+backend/.env
+backend/alembic/versions/*.pyc
+
+# ========================
+# Environment files (NEVER commit these)
+# ========================
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# ========================
+# Vercel
+# ========================
+.vercel/
+
+# ========================
+# IDEs
+# ========================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
