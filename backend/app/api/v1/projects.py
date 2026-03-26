@@ -246,6 +246,138 @@ async def get_unit(
     return await _unit_out(unit, db)
 
 
+@router.get("/{project_id}/dashboard")
+async def project_dashboard(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """All data needed for the project dashboard in one request."""
+    from app.models.installation import Installation
+    from app.models.note import Note
+    from app.models.email_draft import EmailDraft
+
+    result = await db.execute(
+        select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # All units for this project
+    unit_result = await db.execute(select(Unit).where(Unit.project_id == project_id))
+    units = unit_result.scalars().all()
+    unit_ids = [u.id for u in units]
+
+    # All requests through units
+    requests = []
+    if unit_ids:
+        req_result = await db.execute(
+            select(Request)
+            .where(Request.unit_id.in_(unit_ids))
+            .order_by(Request.created_at.desc())
+        )
+        requests = req_result.scalars().all()
+
+    request_ids = [r.id for r in requests]
+
+    # Group requests by status
+    status_counts: dict[str, int] = {}
+    for r in requests:
+        key = r.status.value
+        status_counts[key] = status_counts.get(key, 0) + 1
+
+    # Installations through requests
+    installations = []
+    if request_ids:
+        inst_result = await db.execute(
+            select(Installation)
+            .where(Installation.request_id.in_(request_ids))
+            .order_by(Installation.start_date.desc().nullslast())
+        )
+        installations = inst_result.scalars().all()
+
+    avg_completion = (
+        int(sum(i.completion_percentage for i in installations) / len(installations))
+        if installations else 0
+    )
+
+    # Notes for this project
+    note_result = await db.execute(
+        select(Note)
+        .where(Note.project_id == project_id, Note.deleted_at.is_(None))
+        .order_by(Note.created_at.desc())
+        .limit(10)
+    )
+    notes = note_result.scalars().all()
+
+    # Email drafts linked to this project's requests
+    emails = []
+    if request_ids:
+        email_result = await db.execute(
+            select(EmailDraft)
+            .where(EmailDraft.request_id.in_(request_ids))
+            .order_by(EmailDraft.created_at.desc())
+            .limit(10)
+        )
+        emails = email_result.scalars().all()
+
+    return {
+        "project": await _project_out(project, db),
+        "stats": {
+            "requests_total": len(requests),
+            "requests_by_status": status_counts,
+            "installations_count": len(installations),
+            "installations_avg_completion": avg_completion,
+            "notes_count": len(notes),
+            "emails_count": len(emails),
+        },
+        "requests": [
+            {
+                "id": str(r.id),
+                "title": r.title,
+                "status": r.status.value,
+                "priority": r.priority.value,
+                "category": r.category.value,
+                "unit_id": str(r.unit_id),
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in requests
+        ],
+        "installations": [
+            {
+                "id": str(i.id),
+                "request_id": str(i.request_id),
+                "completion_percentage": i.completion_percentage,
+                "start_date": i.start_date.isoformat() if i.start_date else None,
+                "estimated_end_date": i.estimated_end_date.isoformat() if i.estimated_end_date else None,
+                "is_partial": i.is_partial,
+            }
+            for i in installations
+        ],
+        "notes": [
+            {
+                "id": str(n.id),
+                "title": n.title,
+                "content": n.content,
+                "created_at": n.created_at.isoformat(),
+            }
+            for n in notes
+        ],
+        "emails": [
+            {
+                "id": str(e.id),
+                "subject": e.subject,
+                "recipient_type": e.recipient_type.value if e.recipient_type else None,
+                "recipient_email": e.recipient_email,
+                "is_sent": e.is_sent,
+                "created_at": e.created_at.isoformat(),
+            }
+            for e in emails
+        ],
+    }
+
+
 @router.patch("/{project_id}/units/{unit_id}")
 async def update_unit(
     project_id: uuid.UUID,

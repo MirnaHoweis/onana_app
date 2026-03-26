@@ -136,6 +136,7 @@ class _MobileList extends StatelessWidget {
         itemBuilder: (context, i) => ProjectCard(
           project: projects[i],
           onTap: () => context.go('/projects/${projects[i].id}'),
+          onDoubleTap: () => context.go('/projects/${projects[i].id}/dashboard'),
         ),
       ),
     );
@@ -164,7 +165,7 @@ class _WebTable extends StatelessWidget {
           },
           children: [
             _tableHeader(),
-            ...projects.map(_tableRow),
+            ...projects.map((p) => _tableRow(p, context)),
           ],
         ),
       ),
@@ -188,20 +189,25 @@ class _WebTable extends StatelessWidget {
     );
   }
 
-  TableRow _tableRow(ProjectModel p) {
+  TableRow _tableRow(ProjectModel p, BuildContext context) {
     return TableRow(
       decoration: const BoxDecoration(
         color: AppColors.cardSurface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.divider)),
       ),
       children: [
-        _cell(Text(p.name, style: AppTypography.labelLarge)),
+        _cell(GestureDetector(
+          onTap: () => context.go('/projects/${p.id}'),
+          onDoubleTap: () => context.go('/projects/${p.id}/dashboard'),
+          child: Text(p.name, style: AppTypography.labelLarge),
+        )),
         _cell(Text(p.clientName ?? '—', style: AppTypography.bodyMedium)),
         _cell(Text(p.location ?? '—', style: AppTypography.bodyMedium)),
         _cell(Text('${p.unitCount}', style: AppTypography.bodyMedium)),
-        _cell(ProjectStatusBadge(status: p.status)),
+        _cell(GestureDetector(
+          onDoubleTap: () => context.go('/projects/${p.id}/dashboard'),
+          child: ProjectStatusBadge(status: p.status),
+        )),
       ],
     );
   }

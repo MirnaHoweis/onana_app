@@ -10,15 +10,18 @@ class ProjectCard extends StatelessWidget {
     super.key,
     required this.project,
     required this.onTap,
+    this.onDoubleTap,
   });
 
   final ProjectModel project;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       onTap: onTap,
+      onDoubleTap: onDoubleTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

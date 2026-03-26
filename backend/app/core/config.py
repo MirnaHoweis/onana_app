@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     SENDGRID_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+    # Microsoft / Outlook OAuth
+    MICROSOFT_CLIENT_ID: str = ""
+    MICROSOFT_CLIENT_SECRET: str = ""
+    MICROSOFT_TENANT_ID: str = "common"
+    MICROSOFT_REDIRECT_URI: str = "http://localhost:8000/api/v1/outlook/callback"
 
 
 settings = Settings()

@@ -66,6 +66,21 @@ class ApiClient {
     }
   }
 
+  Future<Response<T>> postFile<T>(
+    String path, {
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(bytes, filename: fileName),
+      });
+      return await _dio.post<T>(path, data: formData);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   AppException _mapError(DioException e) {
     final statusCode = e.response?.statusCode;
     final message = _extractMessage(e) ?? 'An unexpected error occurred';

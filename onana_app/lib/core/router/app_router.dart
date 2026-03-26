@@ -5,6 +5,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/projects/projects_screen.dart';
 import '../../features/projects/project_detail_screen.dart';
+import '../../features/projects/project_dashboard_screen.dart';
 import '../../features/units/unit_detail_screen.dart';
 import '../../features/requests/requests_screen.dart';
 import '../../features/requests/request_detail_screen.dart';
@@ -92,6 +93,12 @@ final _mobileRoutes = [
           projectId: state.pathParameters['projectId']!,
         ),
         routes: [
+          GoRoute(
+            path: 'dashboard',
+            builder: (context, state) => ProjectDashboardScreen(
+              projectId: state.pathParameters['projectId']!,
+            ),
+          ),
           GoRoute(
             path: 'units/:unitId',
             builder: (context, state) => UnitDetailScreen(

@@ -39,4 +39,14 @@ class ApiEndpoints {
   static const String aiDetectDelays = '/ai/detect-delays';
   static const String aiDailySummary = '/ai/daily-summary';
   static const String aiNoteToTask = '/ai/note-to-task';
+
+  // Import
+  static const String importExcel = '/import/excel';
+
+  // Outlook
+  static const String outlookAuthUrl = '/outlook/auth-url';
+  static const String outlookCallback = '/outlook/callback';
+  static const String outlookStatus = '/outlook/status';
+  static const String outlookDisconnect = '/outlook/disconnect';
+  static const String outlookSend = '/outlook/send';
 }

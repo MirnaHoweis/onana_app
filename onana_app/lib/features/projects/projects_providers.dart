@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
+import '../../core/utils/enums.dart';
 import 'models/project_model.dart';
 import 'models/unit_model.dart';
 
@@ -40,6 +41,14 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
         if (location != null) 'location': location,
         if (clientName != null) 'client_name': clientName,
       },
+    );
+    await refresh();
+  }
+
+  Future<void> updateStatus(String id, ProjectStatus status) async {
+    await ApiClient.instance.patch<Map<String, dynamic>>(
+      '/projects/$id',
+      data: {'status': status.name.toUpperCase()},
     );
     await refresh();
   }
@@ -91,6 +100,15 @@ class UnitsNotifier extends FamilyAsyncNotifier<List<UnitModel>, String> {
     state = await AsyncValue.guard(() => _fetch(arg));
   }
 }
+
+// ── Project dashboard ──────────────────────────────────────────────────────
+
+final projectDashboardProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  final response = await ApiClient.instance
+      .get<Map<String, dynamic>>('/projects/$id/dashboard');
+  return response.data!;
+});
 
 // ── Single unit ────────────────────────────────────────────────────────────
 

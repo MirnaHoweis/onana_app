@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_card.dart';
 import '../auth/auth_provider.dart';
+import '../email/outlook_provider.dart';
+import '../import/import_excel_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -64,6 +69,28 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          const _SectionLabel('Integrations'),
+          const SizedBox(height: 8),
+          AppCard(
+            child: Column(
+              children: [
+                _OutlookTile(),
+                const Divider(color: AppColors.divider, height: 1),
+                _SettingsTile(
+                  icon: Icons.table_chart_outlined,
+                  title: 'Import from Excel',
+                  subtitle: 'Bulk-import projects & requests',
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const ImportExcelSheet(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           const _SectionLabel('About'),
           const SizedBox(height: 8),
           const AppCard(
@@ -97,6 +124,62 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OutlookTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statusAsync = ref.watch(outlookStatusProvider);
+
+    return statusAsync.when(
+      loading: () => const ListTile(
+        leading: Icon(Icons.mail_outlined, size: 22, color: AppColors.mutedBlueGray),
+        title: Text('Outlook'),
+        trailing: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, __) => const ListTile(
+        leading: Icon(Icons.mail_outlined, size: 22, color: AppColors.mutedBlueGray),
+        title: Text('Outlook'),
+        subtitle: Text('Could not load status'),
+      ),
+      data: (status) => ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Icon(
+          Icons.mail_outlined,
+          size: 22,
+          color: status.connected ? AppColors.successGreen : AppColors.mutedBlueGray,
+        ),
+        title: Text('Outlook', style: AppTypography.labelLarge),
+        subtitle: Text(
+          status.connected ? 'Connected as ${status.email}' : 'Not connected',
+          style: AppTypography.bodyMedium.copyWith(
+            color: status.connected ? AppColors.successGreen : AppColors.mutedBlueGray,
+            fontSize: 12,
+          ),
+        ),
+        trailing: status.connected
+            ? TextButton(
+                onPressed: () async {
+                  await ApiClient.instance.delete(ApiEndpoints.outlookDisconnect);
+                  ref.invalidate(outlookStatusProvider);
+                },
+                child: Text('Disconnect',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.errorRed)),
+              )
+            : TextButton(
+                onPressed: () async {
+                  final urlAsync = await ref.read(outlookAuthUrlProvider.future);
+                  final uri = Uri.parse(urlAsync);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Text('Connect',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.softGold)),
+              ),
       ),
     );
   }
