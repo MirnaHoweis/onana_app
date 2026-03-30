@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/utils/enums.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_shimmer.dart';
 import '../../core/widgets/section_header.dart';
@@ -63,7 +64,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                     orElse: () => null,
                   ),
                   trailing: TextButton.icon(
-                    onPressed: () {},
+                    onPressed: () => _showAddUnitSheet(context, ref, projectId),
                     icon: const Icon(Icons.add, size: 16,
                         color: AppColors.softGold),
                     label: Text(
@@ -107,6 +108,11 @@ class ProjectDetailScreen extends ConsumerWidget {
                               onTap: () => context.go(
                                 '/projects/$projectId/units/${units[i].id}',
                               ),
+                              onDelete: () async {
+                                await ref
+                                    .read(unitsProvider(projectId).notifier)
+                                    .delete(units[i].id);
+                              },
                             ),
                           ),
                           childCount: units.length,
@@ -118,6 +124,191 @@ class ProjectDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+void _showAddUnitSheet(BuildContext context, WidgetRef ref, String projectId) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _AddUnitSheet(projectId: projectId),
+  );
+}
+
+class _AddUnitSheet extends ConsumerStatefulWidget {
+  const _AddUnitSheet({required this.projectId});
+  final String projectId;
+
+  @override
+  ConsumerState<_AddUnitSheet> createState() => _AddUnitSheetState();
+}
+
+class _AddUnitSheetState extends ConsumerState<_AddUnitSheet> {
+  final _nameCtrl = TextEditingController();
+  final _floorCtrl = TextEditingController();
+  final _blockCtrl = TextEditingController();
+  UnitType _type = UnitType.apartment;
+  bool _loading = false;
+  String? _error;
+
+  static const _typeLabels = {
+    UnitType.villa: 'Villa',
+    UnitType.apartment: 'Apartment',
+    UnitType.commercial: 'Commercial',
+  };
+
+  static String _typeApi(UnitType t) {
+    const map = {
+      UnitType.villa: 'VILLA',
+      UnitType.apartment: 'APARTMENT',
+      UnitType.commercial: 'COMMERCIAL',
+    };
+    return map[t]!;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _floorCtrl.dispose();
+    _blockCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.warmWhite,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24, 24, 24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Add Unit', style: AppTypography.headingMedium),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Unit Name *'),
+              style: AppTypography.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                SizedBox(
+                  width: 80,
+                  child: Text('Type', style: AppTypography.labelSmall),
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.sandBeige,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<UnitType>(
+                        value: _type,
+                        isExpanded: true,
+                        style: AppTypography.bodyMedium,
+                        items: UnitType.values
+                            .map((t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(_typeLabels[t]!),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _type = v);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _floorCtrl,
+              decoration: const InputDecoration(labelText: 'Floor (optional)'),
+              style: AppTypography.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _blockCtrl,
+              decoration: const InputDecoration(labelText: 'Block (optional)'),
+              style: AppTypography.bodyMedium,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                _error!,
+                style: AppTypography.bodyMedium
+                    .copyWith(color: AppColors.errorRed),
+              ),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.deepCharcoal,
+                        ),
+                      )
+                    : Text('Add Unit', style: AppTypography.labelLarge),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Unit name is required.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(unitsProvider(widget.projectId).notifier).create(
+            name: name,
+            type: _typeApi(_type),
+            floor: _floorCtrl.text.trim(),
+            block: _blockCtrl.text.trim(),
+          );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Failed to add unit. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }
 

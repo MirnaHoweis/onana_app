@@ -99,6 +99,31 @@ class UnitsNotifier extends FamilyAsyncNotifier<List<UnitModel>, String> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetch(arg));
   }
+
+  Future<void> create({
+    required String name,
+    required String type,
+    String? floor,
+    String? block,
+  }) async {
+    await ApiClient.instance.post<Map<String, dynamic>>(
+      '/projects/$arg/units',
+      data: {
+        'name': name,
+        'type': type,
+        if (floor != null && floor.isNotEmpty) 'floor': floor,
+        if (block != null && block.isNotEmpty) 'block': block,
+      },
+    );
+    await refresh();
+  }
+
+  Future<void> delete(String unitId) async {
+    await ApiClient.instance.delete('/projects/$arg/units/$unitId');
+    state = state.whenData(
+      (list) => list.where((u) => u.id != unitId).toList(),
+    );
+  }
 }
 
 // ── Project dashboard ──────────────────────────────────────────────────────

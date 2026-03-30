@@ -6,10 +6,16 @@ import '../../../core/widgets/status_badge.dart';
 import '../models/unit_model.dart';
 
 class UnitListTile extends StatelessWidget {
-  const UnitListTile({super.key, required this.unit, required this.onTap});
+  const UnitListTile({
+    super.key,
+    required this.unit,
+    required this.onTap,
+    this.onDelete,
+  });
 
   final UnitModel unit;
   final VoidCallback onTap;
+  final Future<void> Function()? onDelete;
 
   static const Map<UnitType, IconData> _icons = {
     UnitType.villa: Icons.house_outlined,
@@ -90,13 +96,49 @@ class UnitListTile extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 4),
-            const Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: AppColors.mutedBlueGray,
-            ),
+            if (onDelete != null)
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    size: 18, color: AppColors.errorRed),
+                tooltip: 'Delete unit',
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () => _confirmDelete(context),
+              )
+            else
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.mutedBlueGray,
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Unit'),
+        content: Text('Delete "${unit.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDelete!();
+            },
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.errorRed),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

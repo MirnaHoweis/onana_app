@@ -246,6 +246,23 @@ async def get_unit(
     return await _unit_out(unit, db)
 
 
+@router.delete("/{project_id}/units/{unit_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_unit(
+    project_id: uuid.UUID,
+    unit_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    result = await db.execute(
+        select(Unit).where(Unit.id == unit_id, Unit.project_id == project_id)
+    )
+    unit = result.scalar_one_or_none()
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    await db.delete(unit)
+    await db.commit()
+
+
 @router.get("/{project_id}/dashboard")
 async def project_dashboard(
     project_id: uuid.UUID,
