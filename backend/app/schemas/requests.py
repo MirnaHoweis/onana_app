@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 
@@ -50,26 +50,6 @@ class RequestOut(BaseModel):
     actual_delivery_date: Optional[date]
     assigned_to: Optional[uuid.UUID]
     created_by: uuid.UUID
-    created_at: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}
-
-    @classmethod
-    def from_orm_with_date(cls, obj) -> "RequestOut":
-        return cls(
-            id=obj.id,
-            unit_id=obj.unit_id,
-            title=obj.title,
-            description=obj.description,
-            category=obj.category,
-            status=obj.status,
-            priority=obj.priority,
-            supplier_name=obj.supplier_name,
-            po_number=obj.po_number,
-            po_date=obj.po_date,
-            expected_delivery_date=obj.expected_delivery_date,
-            actual_delivery_date=obj.actual_delivery_date,
-            assigned_to=obj.assigned_to,
-            created_by=obj.created_by,
-            created_at=obj.created_at.isoformat(),
-        )
