@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/utils/enums.dart';
+import 'models/history_entry_model.dart';
 import 'models/request_model.dart';
 
 // ── Requests list (optionally filtered by stage) ──────────────────────────
@@ -146,3 +147,15 @@ String _priorityToApi(RequestPriority p) {
   };
   return map[p]!;
 }
+
+// ── Request history ─────────────────────────────────────────────────────────
+
+final requestHistoryProvider = FutureProvider.autoDispose
+    .family<List<HistoryEntry>, String>((ref, requestId) async {
+  final response = await ApiClient.instance
+      .get<List<dynamic>>('/requests/$requestId/history');
+  final data = response.data ?? [];
+  return data
+      .map((e) => HistoryEntry.fromJson(e as Map<String, dynamic>))
+      .toList();
+});

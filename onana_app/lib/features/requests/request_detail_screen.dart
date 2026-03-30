@@ -8,6 +8,7 @@ import '../../core/utils/enums.dart';
 import '../../core/widgets/loading_shimmer.dart';
 import '../../core/widgets/pipeline_stepper.dart';
 import '../../core/widgets/section_header.dart';
+import 'models/history_entry_model.dart';
 import 'models/request_model.dart';
 import 'requests_providers.dart';
 import 'widgets/priority_badge.dart';
@@ -62,12 +63,23 @@ class RequestDetailScreen extends ConsumerWidget {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: _PoCard(request: request),
                 ),
               ),
             ],
-            const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 24, 16, 12),
+              sliver: SliverToBoxAdapter(
+                child: SectionHeader(title: 'Status History'),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+              sliver: SliverToBoxAdapter(
+                child: _HistoryTable(requestId: request.id),
+              ),
+            ),
           ],
         ),
       ),
@@ -91,8 +103,8 @@ class RequestDetailScreen extends ConsumerWidget {
           await ref
               .read(requestProvider(request.id).notifier)
               .updateStatus(stage, notes: notes);
-          // Also refresh the list so the filter counts update
           ref.invalidate(requestsProvider);
+          ref.invalidate(requestHistoryProvider(request.id));
         },
       ),
     );
@@ -443,6 +455,195 @@ class _StageUpdateSheetState extends ConsumerState<_StageUpdateSheet> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+}
+
+// ── Status history table ────────────────────────────────────────────────────
+
+class _HistoryTable extends ConsumerWidget {
+  const _HistoryTable({required this.requestId});
+  final String requestId;
+
+  static const _cols = ['Date & Time', 'From', 'To', 'Changed By', 'Notes'];
+  static const _flex  = [3, 2, 2, 2, 3];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(requestHistoryProvider(requestId));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 16,
+            offset: Offset(0, 4),
+            color: Color(0x0A000000),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header row
+          Container(
+            color: AppColors.sandBeige,
+            child: Row(
+              children: List.generate(_cols.length, (i) => Expanded(
+                flex: _flex[i],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 10),
+                  child: Text(
+                    _cols[i],
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.mutedBlueGray,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              )),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.divider),
+          historyAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.softGold,
+                  ),
+                ),
+              ),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('Could not load history',
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.mutedBlueGray)),
+            ),
+            data: (entries) {
+              if (entries.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'No status changes recorded yet.',
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.mutedBlueGray),
+                  ),
+                );
+              }
+              return Column(
+                children: List.generate(entries.length, (i) {
+                  final e = entries[i];
+                  final isEven = i.isEven;
+                  return Container(
+                    color: isEven
+                        ? AppColors.cardSurface
+                        : AppColors.warmWhite,
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Date & Time
+                            Expanded(
+                              flex: _flex[0],
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Text(
+                                  _fmt(e.createdAt),
+                                  style: AppTypography.labelSmall,
+                                ),
+                              ),
+                            ),
+                            // From
+                            Expanded(
+                              flex: _flex[1],
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Text(
+                                  e.fromStatus ?? '—',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    fontSize: 11,
+                                    color: AppColors.mutedBlueGray,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // To
+                            Expanded(
+                              flex: _flex[2],
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Text(
+                                  e.toStatus,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.softGold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Changed By
+                            Expanded(
+                              flex: _flex[3],
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Text(
+                                  e.changedByName,
+                                  style: AppTypography.labelSmall,
+                                ),
+                              ),
+                            ),
+                            // Notes
+                            Expanded(
+                              flex: _flex[4],
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Text(
+                                  e.notes ?? '—',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    fontSize: 11,
+                                    color: AppColors.mutedBlueGray,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (i < entries.length - 1)
+                          const Divider(
+                              height: 1, color: AppColors.divider),
+                      ],
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(DateTime dt) {
+    final d = dt.toLocal();
+    final date =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    final time =
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    return '$date\n$time';
   }
 }
 

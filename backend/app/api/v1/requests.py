@@ -17,6 +17,16 @@ from app.schemas.requests import (
     StatusUpdateRequest,
 )
 
+_STAGE_LABELS = {
+    "MATERIAL_REQUEST": "Material Request",
+    "PO_REQUESTED": "PO Requested",
+    "PO_CREATED": "PO Created",
+    "DELIVERY": "Delivery",
+    "STOREKEEPER_CONFIRMED": "Storekeeper Confirmed",
+    "INSTALLATION_IN_PROGRESS": "Installation In Progress",
+    "INSTALLATION_COMPLETE": "Installation Complete",
+}
+
 router = APIRouter()
 
 
@@ -128,3 +138,33 @@ async def delete_request(
         raise HTTPException(status_code=404, detail="Request not found")
     req.deleted_at = datetime.now(timezone.utc)
     await db.commit()
+
+
+@router.get("/{request_id}/history")
+async def get_request_history(
+    request_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[dict]:
+    result = await db.execute(
+        select(RequestHistory, User.full_name)
+        .join(User, RequestHistory.changed_by == User.id)
+        .where(RequestHistory.request_id == request_id)
+        .order_by(RequestHistory.created_at.asc())
+    )
+    rows = result.all()
+    return [
+        {
+            "id": str(row.RequestHistory.id),
+            "from_status": _STAGE_LABELS.get(
+                str(row.RequestHistory.from_status or ""), row.RequestHistory.from_status
+            ),
+            "to_status": _STAGE_LABELS.get(
+                str(row.RequestHistory.to_status), row.RequestHistory.to_status
+            ),
+            "changed_by_name": row.full_name,
+            "notes": row.RequestHistory.notes,
+            "created_at": row.RequestHistory.created_at.isoformat(),
+        }
+        for row in rows
+    ]
