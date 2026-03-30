@@ -5,6 +5,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/widgets/swipe_to_delete.dart';
+import '../trash/trash_providers.dart';
 import 'email_providers.dart';
 import 'models/email_draft_model.dart';
 import 'widgets/compose_email_sheet.dart';
@@ -58,13 +60,59 @@ class EmailScreen extends ConsumerWidget {
               if (unsent.isNotEmpty) ...[
                 _SectionLabel('Drafts (${unsent.length})'),
                 const SizedBox(height: 8),
-                ...unsent.map((d) => _DraftCard(draft: d)),
+                ...unsent.map((d) => SwipeToDelete(
+                      itemKey: ValueKey(d.id),
+                      onDelete: () async {
+                        final container = ProviderScope.containerOf(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        await ref
+                            .read(emailDraftsProvider.notifier)
+                            .delete(d.id);
+                        messenger.showSnackBar(SnackBar(
+                          content: Text('"${d.subject}" moved to Trash'),
+                          backgroundColor: AppColors.deepCharcoal,
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            textColor: AppColors.softGold,
+                            onPressed: () async {
+                              await restoreTrashItem('email', d.id);
+                              container.invalidate(emailDraftsProvider);
+                            },
+                          ),
+                        ));
+                      },
+                      child: _DraftCard(draft: d),
+                    )),
               ],
               if (sent.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 _SectionLabel('Sent (${sent.length})'),
                 const SizedBox(height: 8),
-                ...sent.map((d) => _DraftCard(draft: d)),
+                ...sent.map((d) => SwipeToDelete(
+                      itemKey: ValueKey(d.id),
+                      onDelete: () async {
+                        final container = ProviderScope.containerOf(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        await ref
+                            .read(emailDraftsProvider.notifier)
+                            .delete(d.id);
+                        messenger.showSnackBar(SnackBar(
+                          content: Text('"${d.subject}" moved to Trash'),
+                          backgroundColor: AppColors.deepCharcoal,
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            textColor: AppColors.softGold,
+                            onPressed: () async {
+                              await restoreTrashItem('email', d.id);
+                              container.invalidate(emailDraftsProvider);
+                            },
+                          ),
+                        ));
+                      },
+                      child: _DraftCard(draft: d),
+                    )),
               ],
             ],
           );

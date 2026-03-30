@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
-from app.models.base import TimestampMixin, new_uuid
+from app.models.base import SoftDeleteMixin, TimestampMixin, new_uuid
 
 
 class RequestCategory(PyEnum):
@@ -34,7 +34,7 @@ class RequestPriority(PyEnum):
     URGENT = "URGENT"
 
 
-class Request(Base, TimestampMixin):
+class Request(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "requests"
 
     id: Mapped[uuid.UUID] = mapped_column(

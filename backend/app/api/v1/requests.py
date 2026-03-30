@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -26,7 +27,7 @@ async def list_requests(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[Request]:
-    q = select(Request)
+    q = select(Request).where(Request.deleted_at.is_(None))
     if unit_id:
         q = q.where(Request.unit_id == unit_id)
     if status:
@@ -120,10 +121,10 @@ async def delete_request(
     _: User = Depends(get_current_user),
 ) -> None:
     result = await db.execute(
-        select(Request).where(Request.id == request_id)
+        select(Request).where(Request.id == request_id, Request.deleted_at.is_(None))
     )
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    await db.delete(req)
+    req.deleted_at = datetime.now(timezone.utc)
     await db.commit()

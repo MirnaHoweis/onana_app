@@ -69,6 +69,17 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          const _SectionLabel('Data'),
+          const SizedBox(height: 8),
+          AppCard(
+            child: _SettingsTile(
+              icon: Icons.delete_outline,
+              title: 'Trash',
+              subtitle: 'View and restore deleted items',
+              onTap: () => context.go('/trash'),
+            ),
+          ),
+          const SizedBox(height: 24),
           const _SectionLabel('Integrations'),
           const SizedBox(height: 8),
           AppCard(
@@ -171,10 +182,24 @@ class _OutlookTile extends ConsumerWidget {
               )
             : TextButton(
                 onPressed: () async {
-                  final urlAsync = await ref.read(outlookAuthUrlProvider.future);
-                  final uri = Uri.parse(urlAsync);
-                  if (await canLaunchUrl(uri)) {
+                  try {
+                    final authUrl = await ref.read(outlookAuthUrlProvider.future);
+                    final uri = Uri.parse(authUrl);
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e.toString().contains('503') || e.toString().contains('MICROSOFT_CLIENT_ID')
+                                ? 'Outlook not configured. Add MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET to backend/.env'
+                                : 'Could not connect to Outlook: $e',
+                          ),
+                          backgroundColor: AppColors.errorRed,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    }
                   }
                 },
                 child: Text('Connect',

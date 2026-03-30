@@ -5,6 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/widgets/swipe_to_delete.dart';
+import '../trash/trash_providers.dart';
 import 'notes_providers.dart';
 import 'widgets/note_card.dart';
 
@@ -80,13 +82,35 @@ class NotesScreen extends ConsumerWidget {
                       itemCount: notes.length,
                       separatorBuilder: (_, __) =>
                           const SizedBox(height: 10),
-                      itemBuilder: (context, i) => NoteCard(
-                        note: notes[i],
-                        onTap: () {},
-                        onDelete: () => ref
-                            .read(notesProvider.notifier)
-                            .delete(notes[i].id),
-                      ),
+                      itemBuilder: (context, i) {
+                        final n = notes[i];
+                        return SwipeToDelete(
+                          itemKey: ValueKey(n.id),
+                          onDelete: () async {
+                            final container = ProviderScope.containerOf(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            await ref.read(notesProvider.notifier).delete(n.id);
+                            messenger.showSnackBar(SnackBar(
+                              content: Text('"${n.title}" moved to Trash'),
+                              backgroundColor: AppColors.deepCharcoal,
+                              duration: const Duration(seconds: 3),
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                textColor: AppColors.softGold,
+                                onPressed: () async {
+                                  await restoreTrashItem('note', n.id.toString());
+                                  container.invalidate(notesProvider);
+                                },
+                              ),
+                            ));
+                          },
+                          child: NoteCard(
+                            note: n,
+                            onTap: () {},
+                            onDelete: () => ref.read(notesProvider.notifier).delete(n.id),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },

@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/enums.dart';
+import '../../core/api/api_client.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/widgets/swipe_to_delete.dart';
+import '../trash/trash_providers.dart';
 import 'models/request_model.dart';
 import 'requests_providers.dart';
 import 'widgets/request_card.dart';
@@ -87,11 +90,35 @@ class RequestsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                       itemCount: filtered.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) => RequestCard(
-                        request: filtered[i],
-                        onTap: () =>
-                            context.go('/requests/${filtered[i].id}'),
-                      ),
+                      itemBuilder: (context, i) {
+                        final r = filtered[i];
+                        return SwipeToDelete(
+                          itemKey: ValueKey(r.id),
+                          onDelete: () async {
+                            final container = ProviderScope.containerOf(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            await ApiClient.instance.delete('/requests/${r.id}');
+                            container.invalidate(requestsProvider);
+                            messenger.showSnackBar(SnackBar(
+                              content: Text('"${r.title}" moved to Trash'),
+                              backgroundColor: AppColors.deepCharcoal,
+                              duration: const Duration(seconds: 3),
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                textColor: AppColors.softGold,
+                                onPressed: () async {
+                                  await restoreTrashItem('request', r.id);
+                                  container.invalidate(requestsProvider);
+                                },
+                              ),
+                            ));
+                          },
+                          child: RequestCard(
+                            request: r,
+                            onTap: () => context.go('/requests/${r.id}'),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },

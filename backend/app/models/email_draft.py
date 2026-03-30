@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
-from app.models.base import TimestampMixin, new_uuid
+from app.models.base import SoftDeleteMixin, TimestampMixin, new_uuid
 
 
 class RecipientType(PyEnum):
@@ -16,7 +16,7 @@ class RecipientType(PyEnum):
     STOREKEEPER = "STOREKEEPER"
 
 
-class EmailDraft(Base, TimestampMixin):
+class EmailDraft(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "email_drafts"
 
     id: Mapped[uuid.UUID] = mapped_column(

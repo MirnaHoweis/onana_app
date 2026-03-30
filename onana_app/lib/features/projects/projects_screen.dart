@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/enums.dart';
+import '../../core/api/api_client.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_shimmer.dart';
+import '../../core/widgets/swipe_to_delete.dart';
+import '../trash/trash_providers.dart';
 import 'models/project_model.dart';
 import 'projects_providers.dart';
 import 'widgets/create_project_sheet.dart';
@@ -133,11 +136,36 @@ class _MobileList extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
         itemCount: projects.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, i) => ProjectCard(
-          project: projects[i],
-          onTap: () => context.go('/projects/${projects[i].id}'),
-          onDoubleTap: () => context.go('/projects/${projects[i].id}/dashboard'),
-        ),
+        itemBuilder: (context, i) {
+          final p = projects[i];
+          return SwipeToDelete(
+            itemKey: ValueKey(p.id),
+            onDelete: () async {
+              final container = ProviderScope.containerOf(context);
+              final messenger = ScaffoldMessenger.of(context);
+              await ApiClient.instance.delete('/projects/${p.id}');
+              container.invalidate(projectsProvider);
+              messenger.showSnackBar(SnackBar(
+                content: Text('"${p.name}" moved to Trash'),
+                backgroundColor: AppColors.deepCharcoal,
+                duration: const Duration(seconds: 3),
+                action: SnackBarAction(
+                  label: 'Undo',
+                  textColor: AppColors.softGold,
+                  onPressed: () async {
+                    await restoreTrashItem('project', p.id);
+                    container.invalidate(projectsProvider);
+                  },
+                ),
+              ));
+            },
+            child: ProjectCard(
+              project: p,
+              onTap: () => context.go('/projects/${p.id}'),
+              onDoubleTap: () => context.go('/projects/${p.id}/dashboard'),
+            ),
+          );
+        },
       ),
     );
   }

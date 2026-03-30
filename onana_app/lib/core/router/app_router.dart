@@ -17,6 +17,7 @@ import '../../features/ai_assistant/ai_screen.dart';
 import '../../features/installations/installations_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/trash/trash_screen.dart';
 import '../layout/mobile_shell.dart';
 import '../layout/web_shell.dart';
 
@@ -129,6 +130,10 @@ final _mobileRoutes = [
   GoRoute(
     path: '/notifications',
     builder: (context, state) => const NotificationsScreen(),
+  ),
+  GoRoute(
+    path: '/trash',
+    builder: (context, state) => const TrashScreen(),
   ),
   GoRoute(
     path: '/profile',

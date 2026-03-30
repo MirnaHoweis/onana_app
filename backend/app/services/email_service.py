@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
+
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from sqlalchemy import select
@@ -16,7 +17,7 @@ from app.schemas.emails import EmailDraftCreate, EmailDraftUpdate
 async def list_drafts(db: AsyncSession, user_id: uuid.UUID) -> List[EmailDraft]:
     result = await db.execute(
         select(EmailDraft)
-        .where(EmailDraft.created_by == user_id)
+        .where(EmailDraft.created_by == user_id, EmailDraft.deleted_at.is_(None))
         .order_by(EmailDraft.created_at.desc())
     )
     return list(result.scalars().all())
@@ -63,7 +64,7 @@ async def update_draft(
 
 
 async def delete_draft(db: AsyncSession, draft: EmailDraft) -> None:
-    await db.delete(draft)
+    draft.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
 
