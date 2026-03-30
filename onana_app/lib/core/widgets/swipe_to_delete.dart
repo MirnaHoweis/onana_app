@@ -37,8 +37,12 @@ class SwipeToDelete extends StatelessWidget {
         ]),
       ),
       confirmDismiss: (_) async {
-        await onDelete();
-        return true;
+        try {
+          await onDelete();
+          return true;
+        } catch (_) {
+          return false;
+        }
       },
       child: child,
     );
